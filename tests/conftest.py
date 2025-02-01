@@ -1,9 +1,10 @@
 """Test fixtures for the relations package."""
 
-from typing import ClassVar
+from typing import ClassVar, Any, Optional, List
 import pytest
 from pydantic import BaseModel
-from src.relations import BelongsTo, HasMany, RelationManagementMixin
+from src.relations import BelongsTo, HasMany, RelationManagementMixin, RelationLoader, CacheConfig, HasOne
+
 
 class Employee(RelationManagementMixin, BaseModel):
     id: int
@@ -37,3 +38,89 @@ def employee_class():
 @pytest.fixture
 def department_class():
     return Department
+
+
+class CustomBookLoader(RelationLoader):
+    def load(self, instance: Any) -> Optional[List[Any]]:
+        return [Book(id=1, title="Test Book", author_id=instance.id)]
+
+class CustomAuthorLoader(RelationLoader):
+    def load(self, instance: Any) -> Optional[Any]:
+        return Author(id=instance.author_id, name="Test Author")
+
+class CustomProfileLoader(RelationLoader):
+    def load(self, instance: Any) -> Optional[Any]:
+        return Profile(id=1, bio="Test Bio", author_id=instance.id)
+
+class CustomChapterLoader(RelationLoader):
+    def load(self, instance: Any) -> Optional[List[Any]]:
+        return [Chapter(id=1, title="Test Chapter", book_id=instance.id)]
+
+class CustomAuthorProfileLoader(RelationLoader):
+    def load(self, instance: Any) -> Optional[Any]:
+        return Author(id=instance.author_id, name="Test Author")
+
+class Author(RelationManagementMixin, BaseModel):
+    id: int
+    name: str
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author",
+        loader=CustomBookLoader(),
+        cache_config=CacheConfig(ttl=1)
+    )
+    profile: ClassVar[HasOne["Profile"]] = HasOne(
+        foreign_key="author_id",
+        inverse_of="author",
+        loader=CustomProfileLoader()
+    )
+
+class Book(RelationManagementMixin, BaseModel):
+    id: int
+    title: str
+    author_id: int
+    author: ClassVar[BelongsTo["Author"]] = BelongsTo(
+        foreign_key="author_id",
+        inverse_of="books",
+        loader=CustomAuthorLoader()
+    )
+    chapters: ClassVar[HasMany["Chapter"]] = HasMany(
+        foreign_key="book_id",
+        inverse_of="book",
+        loader=CustomChapterLoader()  # Add the loader here
+    )
+
+class Chapter(RelationManagementMixin, BaseModel):
+    id: int
+    title: str
+    book_id: int
+    book: ClassVar[BelongsTo["Book"]] = BelongsTo(
+        foreign_key="book_id",
+        inverse_of="chapters"
+    )
+
+class Profile(RelationManagementMixin, BaseModel):
+    id: int
+    bio: str
+    author_id: int
+    author: ClassVar[BelongsTo["Author"]] = BelongsTo(
+        foreign_key="author_id",
+        inverse_of="profile",
+        loader=CustomAuthorProfileLoader()  # Add loader
+    )
+
+@pytest.fixture
+def author():
+    return Author(id=1, name="Test Author")
+
+@pytest.fixture
+def book():
+    return Book(id=1, title="Test Book", author_id=1)
+
+@pytest.fixture
+def chapter():
+    return Chapter(id=1, title="Chapter 1", book_id=1)
+
+@pytest.fixture
+def profile():
+    return Profile(id=1, bio="Test Bio", author_id=1)

@@ -18,6 +18,33 @@ class Comment(RelationManagementMixin, BaseModel):
     )
 ```
 
+## Inheritance and Relationship Override
+
+You can override relationships in derived classes:
+
+```python
+class BasePost(RelationManagementMixin, BaseModel):
+    comments: ClassVar[HasMany["Comment"]] = HasMany(
+        foreign_key="post_id",
+        inverse_of="post"
+    )
+
+class ExtendedPost(BasePost):
+    # Override with different relationship configuration
+    comments: ClassVar[HasMany["Comment"]] = HasMany(
+        foreign_key="post_id",
+        inverse_of="post",
+        loader=CustomLoader(),
+        cache_config=CacheConfig(ttl=600)
+    )
+```
+
+Key characteristics:
+- Each class maintains its own relationship configurations
+- Child classes can override parent relationships
+- Parent class relationships remain unchanged
+- Relationships can be enhanced with additional features in derived classes
+
 ## Custom Validation
 
 Implement custom validation rules:

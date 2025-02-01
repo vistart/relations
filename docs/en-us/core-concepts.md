@@ -12,6 +12,15 @@ Three primary relationship types are supported:
 - **HasOne**: Represents a one-to-one relationship where the instance has exactly one related instance
 - **HasMany**: Represents a one-to-many relationship where the instance has multiple related instances
 
+## Inheritance Support
+
+The package supports relationship inheritance and override:
+
+- Each class maintains its own relationship configurations
+- Child classes can override parent relationships
+- Parent class relationships remain unaffected by child overrides
+- Relationship overrides can modify any aspect of the relationship definition
+
 ## Relation Descriptor
 
 The RelationDescriptor is the core class that manages relationships. It:
@@ -20,12 +29,14 @@ The RelationDescriptor is the core class that manages relationships. It:
 - Manages relationship caching
 - Validates relationship configurations
 - Supports forward references for circular dependencies
+- Manages inheritance and overriding
 
 ## Relation Management
 
 The RelationManagementMixin provides:
 
 - Registration of relationships
+- Inheritance handling
 - Cache management
 - Relationship querying capabilities
 - Access to relationship metadata

@@ -61,16 +61,49 @@ class AuthorLoader(RelationLoader):
         return Author(id=book.author_id, name="Author Name")
 ```
 
+## Advanced Model Definition
+
+### Basic Models
+
+```python
+from typing import ClassVar
+from pydantic import BaseModel
+from relations import RelationManagementMixin, HasMany, BelongsTo
+
+class Author(RelationManagementMixin, BaseModel):
+    id: int
+    name: str
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author"
+    )
+```
+
+### Extended Models
+
+You can extend models and override relationships:
+
+```python
+class ExtendedAuthor(Author):
+    # Override with custom loader and cache config
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author",
+        loader=CustomBookLoader(),
+        cache_config=CacheConfig(ttl=600)
+    )
+```
+
 ### 3. Use Relationships
 
 ```python
 # Create instances
 author = Author(id=1, name="John Doe")
-book = Book(id=1, title="Sample Book", author_id=1)
+ext_author = ExtendedAuthor(id=2, name="Jane Doe")
 
 # Access relationships
-author_books = author.books()  # Returns list of books
-book_author = book.author()    # Returns author instance
+author_books = author.books()      # Uses base configuration
+ext_author_books = ext_author.books()  # Uses extended configuration
 ```
 
 ## Next Steps

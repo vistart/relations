@@ -1,7 +1,10 @@
 """Tests for base module."""
+from typing import ClassVar
 
-import pytest
-from src.relations.base import RelationDescriptor
+from pydantic import BaseModel
+
+from src.relations import HasOne, HasMany, BelongsTo
+from src.relations.base import RelationDescriptor, RelationManagementMixin
 from src.relations.cache import CacheConfig
 from src.relations.interfaces import RelationLoader, RelationQuery
 
@@ -93,3 +96,76 @@ def test_relation_descriptor_cache_clear(employee):
     # Verify cache is cleared by checking if loader is called again
     data = relation._load_relation(employee)
     assert data == {"id": 1, "name": "Test"}
+
+
+def test_relation_registration_validation():
+    """Test validation during relation registration."""
+
+    class TestModel(RelationManagementMixin, BaseModel):
+        id: int
+        test: ClassVar[HasOne["Other"]] = HasOne(
+            foreign_key="test_id",
+            inverse_of="inverse"
+        )
+        test: ClassVar[HasMany["Other"]] = HasMany(
+            foreign_key="test_id",
+            inverse_of="inverse"
+        )
+
+    relation = TestModel.get_relation("test")
+    assert isinstance(relation, HasMany)  # 验证后定义的关系生效
+
+def test_relation_inheritance():
+    """Test that derived classes can override relations"""
+
+    class ParentModel(RelationManagementMixin, BaseModel):
+        id: int
+        test: ClassVar[HasOne["Other"]] = HasOne(
+            foreign_key="test_id",
+            inverse_of="inverse"
+        )
+
+    class ChildModel(ParentModel):
+        test: ClassVar[HasMany["Other"]] = HasMany(
+            foreign_key="test_id",
+            inverse_of="inverse"
+        )
+
+    parent_relation = ParentModel.get_relation("test")
+    child_relation = ChildModel.get_relation("test")
+
+    # Verify parent relation remains HasOne
+    assert isinstance(parent_relation, HasOne)
+    assert parent_relation.foreign_key == "test_id"
+
+    # Verify child relation is overridden to HasMany
+    assert isinstance(child_relation, HasMany)
+    assert child_relation.foreign_key == "test_id"
+
+    # Verify relations are different objects
+    assert parent_relation is not child_relation
+
+def test_forward_reference_resolution():
+    """Test resolution of forward references in relationship declarations."""
+
+    class CircularA(RelationManagementMixin, BaseModel):
+        id: int
+        b: ClassVar[HasOne["CircularB"]] = HasOne(
+            foreign_key="a_id",
+            inverse_of="a"
+        )
+
+    class CircularB(RelationManagementMixin, BaseModel):
+        id: int
+        a_id: int
+        a: ClassVar[BelongsTo["CircularA"]] = BelongsTo(
+            foreign_key="a_id",
+            inverse_of="b"
+        )
+
+    a = CircularA(id=1)
+    b = CircularB(id=1, a_id=1)
+
+    # Verify relationships can be accessed
+    assert a.b is not None
+    assert b.a is not None

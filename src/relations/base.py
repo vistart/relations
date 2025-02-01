@@ -246,7 +246,7 @@ class RelationManagementMixin(RelationManagementInterface):
     @classmethod
     def _ensure_relations(cls) -> dict:
         """Ensure class has its own relations dictionary."""
-        if not hasattr(cls, '_relations_dict'):
+        if '_relations_dict' not in cls.__dict__:  # Check class's own dict
             cls._relations_dict = {}
         return cls._relations_dict
 
@@ -254,8 +254,9 @@ class RelationManagementMixin(RelationManagementInterface):
     def register_relation(cls, name: str, relation: RelationDescriptor) -> None:
         """Register relation descriptor."""
         relations = cls._ensure_relations()
-        if name in relations:
-            raise ValueError(f"Duplicate relation: {name}")
+        # Remove 'raise ValueError' check to allow overrides
+        # if name in relations:
+        #     raise ValueError(f"Duplicate relation: {name}")
         relations[name] = relation
 
     @classmethod

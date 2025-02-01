@@ -101,3 +101,41 @@ def test_relation_cache_disabled():
     instance = object()
     cache.set(instance, "test_value")
     assert cache.get(instance) is None
+
+
+def test_concurrent_cache_access():
+    """Test thread-safe cache operations."""
+    import threading
+
+    cache = RelationCache(CacheConfig(max_size=100))
+    cache.relation_name = "test"
+
+    def cache_worker():
+        for i in range(100):
+            instance = object()
+            cache.set(instance, f"value_{i}")
+            assert cache.get(instance) == f"value_{i}"
+
+    threads = [
+        threading.Thread(target=cache_worker)
+        for _ in range(5)
+    ]
+
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+
+def test_cache_memory_management():
+    """Test cache memory management under load."""
+    cache = RelationCache(CacheConfig(max_size=5))
+    cache.relation_name = "test"
+
+    # Fill cache beyond max size
+    for i in range(10):
+        instance = object()
+        cache.set(instance, f"value_{i}")
+
+    # Verify cache size is maintained
+    assert len(cache._cache) <= 5

@@ -2,15 +2,15 @@
 
 ## 安装
 
-您可以按照以下步骤进行安装:
+您可以按照以下步骤进行安装：
 
-1. 克隆仓库:
+1. 克隆仓库：
 ```bash
 git clone https://github.com/vistart/relations.git
 cd relations
 ```
 
-2. 安装包:
+2. 安装包：
 ```bash
 pip install -e .
 ```
@@ -61,16 +61,49 @@ class AuthorLoader(RelationLoader):
         return Author(id=book.author_id, name="作者姓名")
 ```
 
+## 高级模型定义
+
+### 基础模型
+
+```python
+from typing import ClassVar
+from pydantic import BaseModel
+from relations import RelationManagementMixin, HasMany, BelongsTo
+
+class Author(RelationManagementMixin, BaseModel):
+    id: int
+    name: str
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author"
+    )
+```
+
+### 扩展模型
+
+您可以扩展模型并覆盖关系：
+
+```python
+class ExtendedAuthor(Author):
+    # 使用自定义加载器和缓存配置进行覆盖
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author",
+        loader=CustomBookLoader(),
+        cache_config=CacheConfig(ttl=600)
+    )
+```
+
 ### 3. 使用关系
 
 ```python
 # 创建实例
 author = Author(id=1, name="张三")
-book = Book(id=1, title="示例图书", author_id=1)
+ext_author = ExtendedAuthor(id=2, name="李四")
 
 # 访问关系
-author_books = author.books()  # 返回图书列表
-book_author = book.author()    # 返回作者实例
+author_books = author.books()      # 使用基础配置
+ext_author_books = ext_author.books()  # 使用扩展配置
 ```
 
 ## 下一步

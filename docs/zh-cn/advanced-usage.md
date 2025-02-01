@@ -18,6 +18,33 @@ class Comment(RelationManagementMixin, BaseModel):
     )
 ```
 
+## 继承与关系覆盖
+
+您可以在派生类中覆盖关系：
+
+```python
+class BasePost(RelationManagementMixin, BaseModel):
+    comments: ClassVar[HasMany["Comment"]] = HasMany(
+        foreign_key="post_id",
+        inverse_of="post"
+    )
+
+class ExtendedPost(BasePost):
+    # 使用不同的关系配置进行覆盖
+    comments: ClassVar[HasMany["Comment"]] = HasMany(
+        foreign_key="post_id",
+        inverse_of="post",
+        loader=CustomLoader(),
+        cache_config=CacheConfig(ttl=600)
+    )
+```
+
+主要特点：
+- 每个类维护自己的关系配置
+- 子类可以覆盖父类关系
+- 父类关系保持不变
+- 派生类中的关系可以增强额外特性
+
 ## 自定义验证
 
 实现自定义验证规则：
