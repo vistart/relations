@@ -2,20 +2,36 @@
 
 [简体中文](README.zh-cn.md)
 
-A flexible, type-safe relationship management system for Python models. Provides ORM-style relationships with caching support and strict type checking.
+![GitHub License](https://img.shields.io/github/license/vistart/relations)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/vistart/relations/total)
+
+A flexible, type-safe relationship management system for Python models built on top of Pydantic [[source](https://github.com/pydantic/pydantic)|[PyPI](https://pypi.org/project/pydantic/)].
+Provides ORM-style relationships with caching support and strict type checking through Pydantic's validation system.
 
 ## Features
 
-- Type-safe relationship declarations
+- Built on Pydantic for robust data validation and serialization
+- Type-safe relationship declarations with full type hints support
 - Configurable caching with TTL support
 - Support for common relationship types (BelongsTo, HasOne, HasMany)
 - Flexible query and loading interfaces
 - Automatic relationship validation
 - Forward reference support for circular dependencies
 
+## Requirements
+
+- Python >= 3.8
+- pydantic >= 2.0
+
+### Development Requirements
+
+- pytest >= 7.0 (for testing)
+- coverage >= 7.0 (for test coverage)
+
 ## Quick Start
 
 ```python
+from typing import ClassVar
 from pydantic import BaseModel
 from relations import RelationManagementMixin, HasMany, BelongsTo
 
@@ -50,4 +66,4 @@ Detailed documentation is available in the following sections:
 
 ## License
 
-MIT License
+[MIT License](LICENSE)
