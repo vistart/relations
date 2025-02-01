@@ -2,9 +2,35 @@
 
 ## 安装
 
+您可以按照以下步骤进行安装:
+
+1. 克隆仓库:
 ```bash
-pip install python-relations
+git clone https://github.com/vistart/relations.git
+cd relations
 ```
+
+2. 安装包:
+```bash
+pip install -e .
+```
+
+关于 setup.py 的说明:
+
+1. 包目录结构设置:
+   - 使用 `package_dir={"": "src"}` 指定源码在 src 目录下
+   - 使用 `find_packages(where="src")` 来自动发现 src 目录下的包
+
+2. 依赖配置:
+   - 添加了必要的依赖 pydantic
+   - 设置了 Python 最低版本要求
+
+3. 包元信息:
+   - 使用 getting-started.md 作为长描述
+   - 添加了基本的分类信息
+   - 设置了项目 URL 指向 GitHub 仓库
+
+如果您需要修改任何配置，比如添加其他依赖或调整版本要求，我很乐意帮您调整。
 
 ## 基础用法
 

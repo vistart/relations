@@ -2,9 +2,35 @@
 
 ## Installation
 
+You can follow these steps to install:
+
+1. Clone the repository:
 ```bash
-pip install python-relations
+git clone https://github.com/vistart/relations.git
+cd relations
 ```
+
+2. Install the package:
+```bash
+pip install -e .
+```
+
+About the setup.py configuration:
+
+1. Package Directory Structure:
+   - Used `package_dir={"": "src"}` to specify source code in src directory
+   - Used `find_packages(where="src")` to automatically discover packages under src directory
+
+2. Dependencies Configuration:
+   - Added necessary dependencies like pydantic
+   - Set minimum Python version requirement
+
+3. Package Metadata:
+   - Used getting-started.md as long description
+   - Added basic classifiers
+   - Set project URL pointing to GitHub repository
+
+If you need to modify any configuration, such as adding other dependencies or adjusting version requirements, I'm happy to help you adjust it.
 
 ## Basic Usage
 
