@@ -2,8 +2,17 @@
 
 ## Installation
 
+You can follow these steps to install:
+
+1. Clone the repository:
 ```bash
-pip install python-relations
+git clone https://github.com/vistart/relations.git
+cd relations
+```
+
+2. Install the package:
+```bash
+pip install -e .
 ```
 
 ## Basic Usage

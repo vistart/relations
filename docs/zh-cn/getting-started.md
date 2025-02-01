@@ -2,8 +2,17 @@
 
 ## 安装
 
+您可以按照以下步骤进行安装:
+
+1. 克隆仓库:
 ```bash
-pip install python-relations
+git clone https://github.com/vistart/relations.git
+cd relations
+```
+
+2. 安装包:
+```bash
+pip install -e .
 ```
 
 ## 基础用法
