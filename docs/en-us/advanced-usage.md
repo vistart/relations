@@ -1,21 +1,87 @@
 # Advanced Usage
 
-## Forward References
+## Forward References (Deferred Loading)
 
-Handle circular dependencies between models:
+### Understanding the Problem
+
+When defining relationships between models, we often encounter circular dependencies. Consider this scenario:
 
 ```python
 class Post(RelationManagementMixin, BaseModel):
+    # This would raise NameError: name 'Comment' is not defined
+    comments: ClassVar[HasMany[Comment]] = HasMany(
+        foreign_key="post_id",
+        inverse_of="post"
+    )
+
+class Comment(RelationManagementMixin, BaseModel):
+    post: ClassVar[BelongsTo[Post]] = BelongsTo(
+        foreign_key="post_id",
+        inverse_of="comments"
+    )
+```
+
+This code fails because when Python processes the `Post` class, the `Comment` class hasn't been defined yet. Similarly, if we reversed the order, we'd have the same issue with `Post`.
+
+### The Solution: String Literals as Forward References
+
+To solve this, Relations supports string literals as forward references for model names. These references are resolved lazily when they're actually needed:
+
+```python
+class Post(RelationManagementMixin, BaseModel):
+    # Use string literal - this works!
     comments: ClassVar[HasMany["Comment"]] = HasMany(
         foreign_key="post_id",
         inverse_of="post"
     )
 
 class Comment(RelationManagementMixin, BaseModel):
+    # Use string literal here too
     post: ClassVar[BelongsTo["Post"]] = BelongsTo(
         foreign_key="post_id",
         inverse_of="comments"
     )
+```
+
+### How It Works
+
+1. When you define a relationship using a string literal ("Comment" or "Post"), the actual class resolution is deferred
+2. The resolution happens when:
+   - The relationship is first accessed
+   - A query is performed on the relationship
+   - The relationship validator runs
+
+### Benefits
+
+- Eliminates circular import problems
+- Allows more flexible code organization
+- Supports complex relationship hierarchies
+- Maintains type safety through runtime checking
+
+### Important Notes
+
+1. Always use string literals when:
+   - Models have circular relationships
+   - Referenced models are defined later in the code
+   - Models are in different modules
+
+2. Local and Global Resolution:
+```python
+# Same module
+class LocalModel(RelationManagementMixin, BaseModel):
+    relation: ClassVar[HasMany["LocalOther"]] = HasMany(...)
+
+# Different module
+class ImportedModel(RelationManagementMixin, BaseModel):
+    relation: ClassVar[HasMany["other_module.OtherModel"]] = HasMany(...)
+```
+
+3. Error Handling:
+```python
+# Relations will raise a clear error if the model can't be found
+class BadReference(RelationManagementMixin, BaseModel):
+    relation: ClassVar[HasMany["NonExistentModel"]] = HasMany(...)
+    # Raises: ValueError: Unable to resolve model: NonExistentModel
 ```
 
 ## Inheritance and Relationship Override
