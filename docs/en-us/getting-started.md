@@ -2,7 +2,13 @@
 
 ## Installation
 
-You can follow these steps to install:
+You can install the package directly from PyPI:
+
+```bash
+pip install python-relations
+```
+
+If you need to modify the code, run tests, or use the latest development version, you can clone the repository:
 
 1. Clone the repository:
 ```bash
@@ -10,7 +16,7 @@ git clone https://github.com/vistart/relations.git
 cd relations
 ```
 
-2. Install the package:
+2. Install in development mode:
 ```bash
 pip install -e .
 ```
