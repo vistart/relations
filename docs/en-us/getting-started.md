@@ -5,7 +5,7 @@
 You can install the package directly from PyPI:
 
 ```bash
-pip install python-relations
+pip install python_relations
 ```
 
 If you need to modify the code, run tests, or use the latest development version, you can clone the repository:
