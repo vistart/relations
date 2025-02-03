@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="python-relations",
+    name="python_relations",
     version="0.1.0",
     description="A Python library for managing model relationships",
     long_description=open("README.md", "r", encoding="utf-8").read(),
