@@ -3,8 +3,8 @@ from typing import ClassVar
 
 from pydantic import BaseModel
 
-from src.relations import HasOne, HasMany, BelongsTo
-from src.relations.base import RelationDescriptor, RelationManagementMixin
+from src.relations import HasOne, HasMany, BelongsTo, RelationDescriptor
+from src.relations.base import RelationManagementMixin
 from src.relations.cache import CacheConfig
 from src.relations.interfaces import RelationLoader, RelationQuery
 
