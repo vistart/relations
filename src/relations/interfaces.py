@@ -30,30 +30,6 @@ class RelationLoader(Generic[T], ABC):
         """
         pass
 
-class RelationQuery(Generic[T], ABC):
-    """
-    Abstract interface for querying related objects.
-    Implementers define how to query the target model class.
-    """
-
-    @abstractmethod
-    def query(self, instance: Any, *args, **kwargs) -> List[T]:
-        """
-        Query related objects with optional filtering.
-
-        Args:
-            instance: Source model instance to query relations for
-            *args: Positional arguments for query
-            **kwargs: Keyword arguments for filtering
-
-        Returns:
-            List[T]: List of matching related instances
-
-        Raises:
-            ValueError: If invalid query parameters provided
-        """
-        pass
-
 class RelationValidation(ABC):
     """
     Abstract interface for relationship validation.

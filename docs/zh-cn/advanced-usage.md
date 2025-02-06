@@ -35,12 +35,20 @@ class Post(RelationManagementMixin, BaseModel):
         inverse_of="post"
     )
 
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
+
 class Comment(RelationManagementMixin, BaseModel):
     # 这里也使用字符串字面量
     post: ClassVar[BelongsTo["Post"]] = BelongsTo(
         foreign_key="post_id",
         inverse_of="comments"
     )
+
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
 ```
 
 ### 工作原理
@@ -48,7 +56,7 @@ class Comment(RelationManagementMixin, BaseModel):
 1. 当您使用字符串字面量（"Comment" 或 "Post"）定义关系时，实际的类解析会被延迟
 2. 解析会在以下情况发生：
    - 首次访问关系时
-   - 对关系执行查询时
+   - 访问查询属性时
    - 关系验证器运行时
 
 ### 优势
@@ -130,21 +138,29 @@ class CustomRelation(HasMany):
 
 ## 复杂查询
 
-构建高级查询功能：
+通过扩展 QuerySet 构建高级查询功能：
 
 ```python
-class AdvancedBookQuery(RelationQuery):
-    def query(self, author, *args, **kwargs):
+class AdvancedBookQuerySet(QuerySet):
+    def by_genre(self, genre):
         return [
-            book for book in self.load(author)
-            if self._matches_criteria(book, **kwargs)
+            book for book in self.all()
+            if book.genre == genre
         ]
-        
-    def _matches_criteria(self, book, **kwargs):
-        return all(
-            getattr(book, k) == v 
-            for k, v in kwargs.items()
-        )
+    
+    def published_after(self, date):
+        return [
+            book for book in self.all()
+            if book.published_date > date
+        ]
+
+class Book(RelationManagementMixin, BaseModel):
+    @classmethod
+    def objects(cls):
+        return AdvancedBookQuerySet(cls)
+
+# 使用示例
+recent_books = author.books_query.published_after('2023-01-01')
 ```
 
 ## 延迟加载链
@@ -160,7 +176,8 @@ class Book(RelationManagementMixin, BaseModel):
     chapters: ClassVar[HasMany["Chapter"]]
 
 # 使用
-chapters = author.books()[0].chapters()
+book = author.books()[0]
+chapters = book.chapters()
 ```
 
 ## 内存管理

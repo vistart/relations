@@ -41,22 +41,33 @@ The RelationManagementMixin provides:
 - Relationship querying capabilities
 - Access to relationship metadata
 
-## Data Loading
+## Data Loading and Querying
 
-Data loading is handled through:
+Data access is handled through two primary mechanisms:
 
-- **RelationLoader**: Interface for loading related instances
-- **RelationQuery**: Interface for querying related data
-- Custom loader implementations for specific data sources
+### RelationLoader
+- Interface for loading related instances
+- Handles direct relationship access
+- Supports automatic caching of loaded data
+- Used for accessing related records through relationship methods
+
+### QuerySet
+- Provides a flexible query interface for related data
+- Supports filtering and custom query methods
+- Available through `_query` property on relationships
+- Allows real-time querying without caching
+- Can be extended with custom query operations
 
 ## Caching
 
 The caching system provides:
 
 - Configurable TTL (Time-To-Live)
-- Size limits
+- Size limits to prevent memory issues
 - Thread-safe operations
 - Global and per-relationship configurations
+- Automatic caching of loaded relationships
+- Cache clearing capabilities
 
 ## Type Safety
 
@@ -67,4 +78,24 @@ Type safety is enforced through:
 - Relationship validation
 - Forward reference resolution
 
-For implementation details, see [Advanced Usage](advanced-usage.md).
+## Usage Example
+
+```python
+class Author(RelationManagementMixin, BaseModel):
+    id: int
+    name: str
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author"
+    )
+
+    @classmethod
+    def objects(cls):
+        return AuthorQuerySet(cls)
+
+# Direct relationship access (uses loader and cache)
+author = Author(id=1, name="John")
+books = author.books()  # Returns cached data if available
+
+# Query interface (real-time queries)
+recent_books = author.books_query.filter(published_after="2023-01-01")

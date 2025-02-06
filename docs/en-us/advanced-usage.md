@@ -35,12 +35,20 @@ class Post(RelationManagementMixin, BaseModel):
         inverse_of="post"
     )
 
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
+
 class Comment(RelationManagementMixin, BaseModel):
     # Use string literal here too
     post: ClassVar[BelongsTo["Post"]] = BelongsTo(
         foreign_key="post_id",
         inverse_of="comments"
     )
+
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
 ```
 
 ### How It Works
@@ -48,7 +56,7 @@ class Comment(RelationManagementMixin, BaseModel):
 1. When you define a relationship using a string literal ("Comment" or "Post"), the actual class resolution is deferred
 2. The resolution happens when:
    - The relationship is first accessed
-   - A query is performed on the relationship
+   - The query property is accessed
    - The relationship validator runs
 
 ### Benefits
@@ -130,21 +138,29 @@ class CustomRelation(HasMany):
 
 ## Complex Queries
 
-Build advanced query capabilities:
+Build advanced query capabilities by extending QuerySet:
 
 ```python
-class AdvancedBookQuery(RelationQuery):
-    def query(self, author, *args, **kwargs):
+class AdvancedBookQuerySet(QuerySet):
+    def by_genre(self, genre):
         return [
-            book for book in self.load(author)
-            if self._matches_criteria(book, **kwargs)
+            book for book in self.all()
+            if book.genre == genre
         ]
-        
-    def _matches_criteria(self, book, **kwargs):
-        return all(
-            getattr(book, k) == v 
-            for k, v in kwargs.items()
-        )
+    
+    def published_after(self, date):
+        return [
+            book for book in self.all()
+            if book.published_date > date
+        ]
+
+class Book(RelationManagementMixin, BaseModel):
+    @classmethod
+    def objects(cls):
+        return AdvancedBookQuerySet(cls)
+
+# Usage
+recent_books = author.books_query.published_after('2023-01-01')
 ```
 
 ## Lazy Loading Chains
@@ -160,7 +176,8 @@ class Book(RelationManagementMixin, BaseModel):
     chapters: ClassVar[HasMany["Chapter"]]
 
 # Usage
-chapters = author.books()[0].chapters()
+book = author.books()[0]
+chapters = book.chapters()
 ```
 
 ## Memory Management
@@ -223,3 +240,77 @@ class SafeLoader(RelationLoader):
             logger.exception("Unexpected error")
             raise RelationError(f"Failed to load: {str(e)}")
 ```
+
+## Advanced Model Definition
+
+### Extending Models
+
+When extending models, maintain the correct inheritance order and customize data loading:
+
+```python
+class ExtendedAuthor(Author):
+    # Override relationship with custom loader and cache config
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author",
+        loader=CustomBookLoader(),    # Different loading strategy
+        cache_config=CacheConfig(ttl=600)
+    )
+
+    @classmethod
+    def objects(cls):
+        return CustomQuerySet(cls)
+```
+
+### Common Pitfalls
+
+1. Incorrect inheritance order:
+```python
+# Wrong - relationship functionality won't work properly
+class Author(BaseModel, RelationManagementMixin):
+    pass
+
+# Correct
+class Author(RelationManagementMixin, BaseModel):
+    pass
+```
+
+2. Missing ClassVar in relationship definitions:
+```python
+# Wrong - Pydantic will treat it as a data field
+class Author(RelationManagementMixin, BaseModel):
+    books: HasMany["Book"] = HasMany(...)
+
+# Correct
+class Author(RelationManagementMixin, BaseModel):
+    books: ClassVar[HasMany["Book"]] = HasMany(...)
+```
+
+3. Not implementing the objects() method:
+```python
+# Incomplete - relationship defined but can't query
+class Author(RelationManagementMixin, BaseModel):
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author"
+    )  # Can't use query interface
+
+# Complete - can access and query data
+class Author(RelationManagementMixin, BaseModel):
+    books: ClassVar[HasMany["Book"]] = HasMany(
+        foreign_key="author_id",
+        inverse_of="author",
+        loader=BookLoader()
+    )
+
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
+```
+
+## Next Steps
+
+- Learn about [Core Concepts](core-concepts.md)
+- Explore [Relationship Types](relationship-types.md)
+- Configure [Caching](caching.md)
+- Implement [Custom Loaders](custom-loaders.md)

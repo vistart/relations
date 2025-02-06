@@ -67,6 +67,11 @@ class Author(RelationManagementMixin, BaseModel):
         inverse_of="author"
     )
 
+    # 模型必须实现 objects() 方法用于查询
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
+
 class Book(RelationManagementMixin, BaseModel):
     # 常规 Pydantic 字段
     id: int
@@ -78,58 +83,55 @@ class Book(RelationManagementMixin, BaseModel):
         foreign_key="author_id",
         inverse_of="books"
     )
+
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
 ```
 
-### 3. 理解加载器和查询器
+### 3. 理解加载器和查询
 
-虽然上面的关系定义建立了模型之间的结构关系（如外键和关系类型），但它们并未指定如何实际加载或查询相关数据。这是因为：
+虽然上面的关系定义建立了模型之间的结构关系（如外键和关系类型），但它们还需要指定如何加载相关数据。这通过以下方式实现：
 
-1. 数据源可能不同（数据库、API、文件等）
-2. 加载策略可能不同（延迟加载 vs 即时加载）
-3. 查询需求可能因应用而异
-
-因此，您需要实现加载器和查询器来指定如何：
-- 获取关联数据（加载器）
-- 过滤和查询关联数据（查询器）
+1. **加载器**：定义如何获取关联数据
+2. **QuerySet**：定义如何查询和过滤模型数据
 
 以下是实现示例：
 
 ```python
-from relations import RelationLoader, RelationQuery
+from relations import RelationLoader
 
 class BookLoader(RelationLoader):
     def load(self, author):
         # 为作者从数据源加载图书
-        # 这只是示例 - 请实现您的实际加载逻辑
         return [
             Book(id=1, title="图书 1", author_id=author.id),
             Book(id=2, title="图书 2", author_id=author.id)
         ]
 
-class BookQuery(RelationQuery):
-    def query(self, author, *args, **kwargs):
-        # 实现带过滤条件的查询逻辑
-        # 例如，按出版年份查找图书
-        books = BookLoader().load(author)
-        if 'year' in kwargs:
-            return [b for b in books if b.publication_year == kwargs['year']]
-        return books
+class AuthorQuerySet(QuerySet):
+    def filter_by_year(self, year):
+        # 自定义查询方法示例
+        return [a for a in self.filter() if a.publication_year == year]
 
-# 更新模型以使用加载器和查询器
+# 更新模型以使用它们
 class Author(RelationManagementMixin, BaseModel):
     id: int
     name: str
     books: ClassVar[HasMany["Book"]] = HasMany(
         foreign_key="author_id",
         inverse_of="author",
-        loader=BookLoader(),
-        query=BookQuery()
+        loader=BookLoader()
     )
+
+    @classmethod
+    def objects(cls):
+        return AuthorQuerySet(cls)
 ```
 
 现在您可以：
 - 访问关联数据：`author.books()`  # 使用加载器
-- 带过滤条件查询：`author.books(year=2023)`  # 使用查询器
+- 查询模型：`author.books_query.filter(year=2023)`  # 使用关联模型的 QuerySet
 
 ### 4. 数据库集成示例
 
@@ -150,22 +152,20 @@ class SQLBookLoader(RelationLoader):
             ).all()
             return [Book.from_orm(r) for r in results]
 
-class SQLBookQuery(RelationQuery):
-    def __init__(self):
+class SQLBookQuerySet(QuerySet):
+    def __init__(self, model_class):
+        super().__init__(model_class)
         self.engine = create_engine("您的数据库URL")
     
-    def query(self, author, *args, **kwargs):
+    def filter(self, **kwargs):
         with Session(self.engine) as session:
-            query = session.query(BookTable).filter_by(
-                author_id=author.id
-            )
+            query = session.query(self.model_class)
             
-            # 添加自定义过滤条件
-            if 'year' in kwargs:
-                query = query.filter_by(publication_year=kwargs['year'])
+            for key, value in kwargs.items():
+                query = query.filter_by(**{key: value})
                 
             results = query.all()
-            return [Book.from_orm(r) for r in results]
+            return [self.model_class.from_orm(r) for r in results]
 ```
 
 ## 高级模型定义
@@ -181,9 +181,12 @@ class ExtendedAuthor(Author):
         foreign_key="author_id",
         inverse_of="author",
         loader=CustomBookLoader(),    # 不同的加载策略
-        query=CustomBookQuery(),      # 不同的查询实现
         cache_config=CacheConfig(ttl=600)
     )
+
+    @classmethod
+    def objects(cls):
+        return CustomQuerySet(cls)
 ```
 
 ### 常见陷阱
@@ -210,28 +213,31 @@ class Author(RelationManagementMixin, BaseModel):
     books: ClassVar[HasMany["Book"]] = HasMany(...)
 ```
 
-3. 未实现加载器/查询器：
+3. 未实现 objects() 方法：
 ```python
-# 不完整 - 已定义关系但无法加载数据
+# 不完整 - 已定义关系但无法查询
 class Author(RelationManagementMixin, BaseModel):
     books: ClassVar[HasMany["Book"]] = HasMany(
         foreign_key="author_id",
         inverse_of="author"
-    )  # 缺少加载器和查询器
+    )  # 无法使用查询接口
 
-# 完整 - 可以加载和查询数据
+# 完整 - 可以访问和查询数据
 class Author(RelationManagementMixin, BaseModel):
     books: ClassVar[HasMany["Book"]] = HasMany(
         foreign_key="author_id",
         inverse_of="author",
-        loader=BookLoader(),
-        query=BookQuery()
+        loader=BookLoader()
     )
+
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
 ```
 
 ## 下一步
 
 - 了解[核心概念](core-concepts.md)
-- 探索不同的[关系类型](relationship-types.md)
+- 探索[关系类型](relationship-types.md)
 - 配置[缓存](caching.md)
 - 实现[自定义加载器](custom-loaders.md)

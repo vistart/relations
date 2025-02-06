@@ -9,12 +9,28 @@ from src.relations import (
     BelongsTo,
     HasOne,
     HasMany,
-    RelationManagementMixin, RelationLoader, RelationQuery
+    RelationManagementMixin, RelationLoader
 )
+
+
+# Mock QuerySet for testing
+class MockQuerySet:
+    def __init__(self, model_class):
+        self.model_class = model_class
+
+    def filter(self, **kwargs):
+        return [type(self.model_class.__name__, (), {'id': 1, 'title': 'Test Book', 'author_id': 1})()]
+
+    def all(self):
+        return self.filter()
+
+    def get(self, **kwargs):
+        return self.filter()[0]
 
 
 def test_relationship_validator():
     """Test RelationshipValidator with valid relationships."""
+
     class FakeBookLoader(RelationLoader):
         def load(self, instance: Any) -> Optional[Any]:
             return type('Book', (), {'id': 1, 'title': 'Test Book', 'author_id': instance.id})()
@@ -23,23 +39,18 @@ def test_relationship_validator():
         def load(self, instance: Any) -> Optional[Any]:
             return type('Author', (), {'id': instance.author_id, 'name': 'Test Author'})()
 
-    class FakeBookQuery(RelationQuery):
-        def query(self, instance: Any, *args, **kwargs) -> List[Any]:
-            return [type('Book', (), {'id': 1, 'title': 'Test Book', 'author_id': 1})()]
-
-    class FakeAuthorQuery(RelationQuery):
-        def query(self, instance: Any, *args, **kwargs) -> List[Any]:
-            return [type('Author', (), {'id': 1, 'name': 'Test Author'})()]
-
     class Author(RelationManagementMixin, BaseModel):
         id: int
         name: str
         book: ClassVar[HasOne["Book"]] = HasOne(
             foreign_key="author_id",
             inverse_of="author",
-            loader=FakeBookLoader(),
-            query=FakeBookQuery()
+            loader=FakeBookLoader()
         )
+
+        @classmethod
+        def objects(cls):
+            return MockQuerySet(cls)
 
     class Book(RelationManagementMixin, BaseModel):
         id: int
@@ -48,9 +59,12 @@ def test_relationship_validator():
         author: ClassVar[BelongsTo["Author"]] = BelongsTo(
             foreign_key="id",
             inverse_of="book",
-            loader=FakeAuthorLoader(),
-            query=FakeAuthorQuery()
+            loader=FakeAuthorLoader()
         )
+
+        @classmethod
+        def objects(cls):
+            return MockQuerySet(cls)
 
     # If no exception is raised, validation passed
     author = Author(id=1, name="Test Author")
@@ -64,6 +78,12 @@ def test_relationship_validator():
     loaded_author = book.author()
     assert loaded_author is not None
     assert hasattr(loaded_author, 'name')
+
+    # Test querying through relationship
+    books_query = author.book_query
+    assert isinstance(books_query, MockQuerySet)
+    queried_books = books_query.filter()
+    assert len(queried_books) > 0
 
 
 def test_invalid_relationship_types():
@@ -151,7 +171,7 @@ def test_inconsistent_inverse_relationship():
 
 
 def test_validates_on_query_method():
-    """Test that validation also occurs when using query methods."""
+    """Test that validation occurs when accessing query property."""
 
     class QueryAuthor(RelationManagementMixin, BaseModel):
         id: int
@@ -161,11 +181,21 @@ def test_validates_on_query_method():
             inverse_of="nonexistent"  # Invalid inverse relationship
         )
 
+        @classmethod
+        def objects(cls):
+            return MockQuerySet(cls)
+
     class QueryBook(RelationManagementMixin, BaseModel):
         id: int
         title: str
         author_id: int
 
-    # Try to use the query method - should trigger validation
+        @classmethod
+        def objects(cls):
+            return MockQuerySet(cls)
+
+    author = QueryAuthor(id=1, name="Test")
+
+    # Try to access the query property - should trigger validation
     with pytest.raises(ValueError, match="Inverse relationship .* not found"):
-        QueryAuthor.book_query()
+        _ = author.book_query

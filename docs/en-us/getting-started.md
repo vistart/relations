@@ -67,6 +67,11 @@ class Author(RelationManagementMixin, BaseModel):
         inverse_of="author"
     )
 
+    # Model must implement the objects() method for querying
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
+
 class Book(RelationManagementMixin, BaseModel):
     # Regular Pydantic fields
     id: int
@@ -78,58 +83,55 @@ class Book(RelationManagementMixin, BaseModel):
         foreign_key="author_id",
         inverse_of="books"
     )
+
+    @classmethod
+    def objects(cls):
+        return QuerySet(cls)
 ```
 
 ### 3. Understanding Loaders and Queries
 
-While the relationship definitions above establish the structure between models (like foreign keys and relationship types), they don't specify how to actually load or query the related data. This is because:
+While the relationship definitions above establish the structure between models (like foreign keys and relationship types), they also need to specify how to load related data. This is done through:
 
-1. Data sources can vary (databases, APIs, files, etc.)
-2. Loading strategies might differ (eager vs. lazy loading)
-3. Query requirements can be application-specific
-
-Therefore, you need to implement loaders and queries to specify how to:
-- Fetch related data (loaders)
-- Filter and query related data (queries)
+1. **Loaders**: Define how to fetch related data
+2. **QuerySet**: Define how to query and filter model data
 
 Here's how to implement them:
 
 ```python
-from relations import RelationLoader, RelationQuery
+from relations import RelationLoader
 
 class BookLoader(RelationLoader):
     def load(self, author):
         # Load books for an author from your data source
-        # This is just an example - implement your actual loading logic
         return [
             Book(id=1, title="Book 1", author_id=author.id),
             Book(id=2, title="Book 2", author_id=author.id)
         ]
 
-class BookQuery(RelationQuery):
-    def query(self, author, *args, **kwargs):
-        # Implement querying logic with filtering
-        # For example, find books by publication year
-        books = BookLoader().load(author)
-        if 'year' in kwargs:
-            return [b for b in books if b.publication_year == kwargs['year']]
-        return books
+class AuthorQuerySet(QuerySet):
+    def filter_by_year(self, year):
+        # Custom query method example
+        return [a for a in self.filter() if a.publication_year == year]
 
-# Update the model to use the loader and query
+# Update the model to use them
 class Author(RelationManagementMixin, BaseModel):
     id: int
     name: str
     books: ClassVar[HasMany["Book"]] = HasMany(
         foreign_key="author_id",
         inverse_of="author",
-        loader=BookLoader(),
-        query=BookQuery()
+        loader=BookLoader()
     )
+
+    @classmethod
+    def objects(cls):
+        return AuthorQuerySet(cls)
 ```
 
 Now you can:
 - Access related data: `author.books()`  # Uses loader
-- Query with filters: `author.books(year=2023)`  # Uses query
+- Query the model: `author.books_query.filter(year=2023)`  # Uses QuerySet from related model
 
 ### 4. Example Database Integration
 
@@ -150,88 +152,18 @@ class SQLBookLoader(RelationLoader):
             ).all()
             return [Book.from_orm(r) for r in results]
 
-class SQLBookQuery(RelationQuery):
-    def __init__(self):
+class SQLBookQuerySet(QuerySet):
+    def __init__(self, model_class):
+        super().__init__(model_class)
         self.engine = create_engine("your_database_url")
     
-    def query(self, author, *args, **kwargs):
+    def filter(self, **kwargs):
         with Session(self.engine) as session:
-            query = session.query(BookTable).filter_by(
-                author_id=author.id
-            )
+            query = session.query(self.model_class)
             
-            # Add custom filters
-            if 'year' in kwargs:
-                query = query.filter_by(publication_year=kwargs['year'])
+            for key, value in kwargs.items():
+                query = query.filter_by(**{key: value})
                 
             results = query.all()
-            return [Book.from_orm(r) for r in results]
+            return [self.model_class.from_orm(r) for r in results]
 ```
-
-## Advanced Model Definition
-
-### Extended Models
-
-When extending models, maintain the proper inheritance order and customize data loading:
-
-```python
-class ExtendedAuthor(Author):
-    # Override with custom loader and cache config
-    books: ClassVar[HasMany["Book"]] = HasMany(
-        foreign_key="author_id",
-        inverse_of="author",
-        loader=CustomBookLoader(),  # Different loading strategy
-        query=CustomBookQuery(),    # Different query implementation
-        cache_config=CacheConfig(ttl=600)
-    )
-```
-
-### Common Pitfalls
-
-1. Wrong inheritance order:
-```python
-# Wrong - relationships won't work properly
-class Author(BaseModel, RelationManagementMixin):
-    pass
-
-# Correct
-class Author(RelationManagementMixin, BaseModel):
-    pass
-```
-
-2. Missing ClassVar in relationship definitions:
-```python
-# Wrong - Pydantic will try to treat this as a data field
-class Author(RelationManagementMixin, BaseModel):
-    books: HasMany["Book"] = HasMany(...)
-
-# Correct
-class Author(RelationManagementMixin, BaseModel):
-    books: ClassVar[HasMany["Book"]] = HasMany(...)
-```
-
-3. Not implementing loaders/queries:
-```python
-# Incomplete - relationship defined but can't load data
-class Author(RelationManagementMixin, BaseModel):
-    books: ClassVar[HasMany["Book"]] = HasMany(
-        foreign_key="author_id",
-        inverse_of="author"
-    )  # Missing loader and query
-
-# Complete - can load and query data
-class Author(RelationManagementMixin, BaseModel):
-    books: ClassVar[HasMany["Book"]] = HasMany(
-        foreign_key="author_id",
-        inverse_of="author",
-        loader=BookLoader(),
-        query=BookQuery()
-    )
-```
-
-## Next Steps
-
-- Learn about [Core Concepts](core-concepts.md)
-- Explore different [Relationship Types](relationship-types.md)
-- Configure [Caching](caching.md)
-- Implement [Custom Loaders](custom-loaders.md)

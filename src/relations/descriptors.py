@@ -6,7 +6,7 @@ Provides BelongsTo, HasOne, and HasMany relationship types.
 from typing import Type, Any, Generic, TypeVar, Union, ForwardRef, Optional, get_type_hints, ClassVar
 
 from .cache import RelationCache, CacheConfig
-from .interfaces import RelationValidation, RelationManagementInterface, RelationLoader, RelationQuery
+from .interfaces import RelationValidation, RelationManagementInterface, RelationLoader
 
 
 T = TypeVar('T')
@@ -33,14 +33,12 @@ class RelationDescriptor(Generic[T]):
             foreign_key: str,
             inverse_of: Optional[str] = None,
             loader: Optional[RelationLoader[T]] = None,
-            query: Optional[RelationQuery[T]] = None,
             validator: Optional[RelationValidation] = None,
             cache_config: Optional[CacheConfig] = None
     ):
         self.foreign_key = foreign_key
         self.inverse_of = inverse_of
         self._loader = loader
-        self._query = query
         self._validator = validator
         self._cache = RelationCache(cache_config)
         self._cached_model: Optional[Type[T]] = None
@@ -52,9 +50,9 @@ class RelationDescriptor(Generic[T]):
 
         owner.register_relation(name, self)
 
-        # Create query method
+        # Create query method that returns QuerySet for the related model
         query_method = self._create_query_method()
-        setattr(owner, f"{name}_query", classmethod(query_method))
+        setattr(owner, f"{name}_query", property(query_method))
 
     def __get__(self, instance: Any, owner: Optional[Type] = None) -> Any:
         """Get descriptor or create bound method."""
@@ -160,14 +158,11 @@ class RelationDescriptor(Generic[T]):
     def _create_query_method(self):
         """Create query class method."""
 
-        def query_method(cls, *args, **kwargs):
-            # 首先强制验证关系配置
-            related_model = self.get_related_model(cls)
-
-            if self._query is None:
-                raise ValueError(f"No query implementation for {self.name} relation")
-            return self._query.query(None, *args, **kwargs)
-
+        def query_method(instance):
+            # Force model resolution if needed
+            related_model = self.get_related_model(type(instance))
+            # Return QuerySet instance for the related model
+            return related_model.objects()
         return query_method
 
     def _load_relation(self, instance: Any) -> Optional[T]:

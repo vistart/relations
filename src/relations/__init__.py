@@ -6,7 +6,7 @@ Provides a flexible, type-safe way to define and manage model relationships.
 from .base import RelationManagementMixin
 from .cache import CacheConfig, GlobalCacheConfig
 from .descriptors import BelongsTo, HasOne, HasMany, RelationDescriptor
-from .interfaces import RelationLoader, RelationQuery
+from .interfaces import RelationLoader
 
 __all__ = [
     'RelationManagementMixin',
@@ -16,5 +16,4 @@ __all__ = [
     'HasOne',
     'HasMany',
     'RelationLoader',
-    'RelationQuery',
 ]

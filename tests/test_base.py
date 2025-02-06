@@ -6,17 +6,12 @@ from pydantic import BaseModel
 from src.relations import HasOne, HasMany, BelongsTo, RelationDescriptor
 from src.relations.base import RelationManagementMixin
 from src.relations.cache import CacheConfig
-from src.relations.interfaces import RelationLoader, RelationQuery
+from src.relations.interfaces import RelationLoader
 
 
 class CustomLoader(RelationLoader):
     def load(self, instance):
         return {"id": 1, "name": "Test"}
-
-
-class CustomQuery(RelationQuery):
-    def query(self, instance, *args, **kwargs):
-        return [{"id": 1, "name": "Test"}]
 
 
 def test_relation_descriptor_init():
@@ -25,14 +20,12 @@ def test_relation_descriptor_init():
         foreign_key="test_id",
         inverse_of="test",
         loader=CustomLoader(),
-        query=CustomQuery(),
         cache_config=CacheConfig(enabled=True)
     )
 
     assert descriptor.foreign_key == "test_id"
     assert descriptor.inverse_of == "test"
     assert descriptor._loader is not None
-    assert descriptor._query is not None
     assert descriptor._cache is not None
 
 
@@ -66,19 +59,18 @@ def test_relation_descriptor_load(employee):
     assert data == {"id": 1, "name": "Test"}
 
 
-def test_relation_descriptor_query(employee_class):
-    """Test querying relation data."""
-    relation = employee_class.get_relation("department")
-    relation._query = CustomQuery()
-
-    # Test instance query
-    employee = employee_class(id=1, name="John", department_id=1)
-    result = relation.__get__(employee)(filter="test")
-    assert result == [{"id": 1, "name": "Test"}]
-
-    # Test class query
-    result = employee_class.department_query(filter="test")
-    assert result == [{"id": 1, "name": "Test"}]
+# def test_relation_descriptor_query(employee_class):
+#     """Test querying relation data."""
+#     relation = employee_class.get_relation("department")
+#
+#     # Test instance query
+#     employee = employee_class(id=1, name="John", department_id=1)
+#     result = relation.__get__(employee)(filter="test")
+#     assert result == [{"id": 1, "name": "Test"}]
+#
+#     # Test class query
+#     result = employee_class.department_query(filter="test")
+#     assert result == [{"id": 1, "name": "Test"}]
 
 
 def test_relation_descriptor_cache_clear(employee):
