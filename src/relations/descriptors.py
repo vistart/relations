@@ -11,6 +11,52 @@ from .interfaces import RelationValidation, RelationManagementInterface, Relatio
 
 T = TypeVar('T')
 
+def _evaluate_forward_ref(ref: Union[str, ForwardRef], owner: Type[Any]) -> Type[T]:
+    """
+    Evaluate forward reference in proper context.
+
+    Args:
+        ref: String or ForwardRef to evaluate
+        owner: Owner model class for resolution context
+
+    Returns:
+        Resolved model class
+    """
+    import sys
+    import inspect
+
+    # Get calling frame to access local scope
+    frame = inspect.currentframe()
+    while frame:
+        if owner.__module__ in str(frame.f_code):
+            local_context = frame.f_locals
+            break
+        frame = frame.f_back
+    else:
+        local_context = {}
+
+    module = sys.modules[owner.__module__]
+    module_globals = {k: getattr(module, k) for k in dir(module)}
+    owner_locals = {owner.__name__: owner}
+
+    # Combine all contexts with priority to most specific scope
+    context = {}
+    context.update(module_globals)
+    context.update(local_context)
+    context.update(owner_locals)
+
+    type_str = ref if isinstance(ref, str) else ref.__forward_arg__
+
+    if isinstance(ref, ForwardRef):
+        try:
+            return ref._evaluate(context, None, recursive_guard=set())
+        except TypeError:
+            try:
+                return ref._evaluate(context, None, set())
+            except TypeError:
+                pass
+
+    return eval(type_str, context, None)
 
 class RelationDescriptor(Generic[T]):
     """
@@ -52,7 +98,7 @@ class RelationDescriptor(Generic[T]):
 
         # Create query method that returns QuerySet for the related model
         query_method = self._create_query_method()
-        setattr(owner, f"{name}_query", property(query_method))
+        setattr(owner, f"{name}_query", query_method)
 
     def __get__(self, instance: Any, owner: Optional[Type] = None) -> Any:
         """Get descriptor or create bound method."""
@@ -272,51 +318,3 @@ class HasMany(RelationDescriptor[T], Generic[T]):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, validator=RelationshipValidator(self), **kwargs)
-
-
-def _evaluate_forward_ref(ref: Union[str, ForwardRef], owner: Type[Any]) -> Type[T]:
-    """
-    Evaluate forward reference in proper context.
-
-    Args:
-        ref: String or ForwardRef to evaluate
-        owner: Owner model class for resolution context
-
-    Returns:
-        Resolved model class
-    """
-    import sys
-    import inspect
-
-    # Get calling frame to access local scope
-    frame = inspect.currentframe()
-    while frame:
-        if owner.__module__ in str(frame.f_code):
-            local_context = frame.f_locals
-            break
-        frame = frame.f_back
-    else:
-        local_context = {}
-
-    module = sys.modules[owner.__module__]
-    module_globals = {k: getattr(module, k) for k in dir(module)}
-    owner_locals = {owner.__name__: owner}
-
-    # Combine all contexts with priority to most specific scope
-    context = {}
-    context.update(module_globals)
-    context.update(local_context)
-    context.update(owner_locals)
-
-    type_str = ref if isinstance(ref, str) else ref.__forward_arg__
-
-    if isinstance(ref, ForwardRef):
-        try:
-            return ref._evaluate(context, None, recursive_guard=set())
-        except TypeError:
-            try:
-                return ref._evaluate(context, None, set())
-            except TypeError:
-                pass
-
-    return eval(type_str, context, None)

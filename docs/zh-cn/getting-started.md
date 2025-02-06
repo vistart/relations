@@ -131,7 +131,7 @@ class Author(RelationManagementMixin, BaseModel):
 
 现在您可以：
 - 访问关联数据：`author.books()`  # 使用加载器
-- 查询模型：`author.books_query.filter(year=2023)`  # 使用关联模型的 QuerySet
+- 查询模型：`author.books_query().filter(year=2023)`  # 使用关联模型的 QuerySet
 
 ### 4. 数据库集成示例
 

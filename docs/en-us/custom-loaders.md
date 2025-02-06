@@ -68,7 +68,7 @@ class Author(RelationManagementMixin, BaseModel):
 # Usage
 author = Author(id=1)
 books = author.books()  # Uses loader with automatic caching
-recent_books = author.books_query.published_after('2023-01-01')  # Real-time query
+recent_books = author.books_query().published_after('2023-01-01')  # Real-time query
 ```
 
 ### API Integration

@@ -160,7 +160,7 @@ class Book(RelationManagementMixin, BaseModel):
         return AdvancedBookQuerySet(cls)
 
 # Usage
-recent_books = author.books_query.published_after('2023-01-01')
+recent_books = author.books_query().published_after('2023-01-01')
 ```
 
 ## Lazy Loading Chains
@@ -240,77 +240,3 @@ class SafeLoader(RelationLoader):
             logger.exception("Unexpected error")
             raise RelationError(f"Failed to load: {str(e)}")
 ```
-
-## Advanced Model Definition
-
-### Extending Models
-
-When extending models, maintain the correct inheritance order and customize data loading:
-
-```python
-class ExtendedAuthor(Author):
-    # Override relationship with custom loader and cache config
-    books: ClassVar[HasMany["Book"]] = HasMany(
-        foreign_key="author_id",
-        inverse_of="author",
-        loader=CustomBookLoader(),    # Different loading strategy
-        cache_config=CacheConfig(ttl=600)
-    )
-
-    @classmethod
-    def objects(cls):
-        return CustomQuerySet(cls)
-```
-
-### Common Pitfalls
-
-1. Incorrect inheritance order:
-```python
-# Wrong - relationship functionality won't work properly
-class Author(BaseModel, RelationManagementMixin):
-    pass
-
-# Correct
-class Author(RelationManagementMixin, BaseModel):
-    pass
-```
-
-2. Missing ClassVar in relationship definitions:
-```python
-# Wrong - Pydantic will treat it as a data field
-class Author(RelationManagementMixin, BaseModel):
-    books: HasMany["Book"] = HasMany(...)
-
-# Correct
-class Author(RelationManagementMixin, BaseModel):
-    books: ClassVar[HasMany["Book"]] = HasMany(...)
-```
-
-3. Not implementing the objects() method:
-```python
-# Incomplete - relationship defined but can't query
-class Author(RelationManagementMixin, BaseModel):
-    books: ClassVar[HasMany["Book"]] = HasMany(
-        foreign_key="author_id",
-        inverse_of="author"
-    )  # Can't use query interface
-
-# Complete - can access and query data
-class Author(RelationManagementMixin, BaseModel):
-    books: ClassVar[HasMany["Book"]] = HasMany(
-        foreign_key="author_id",
-        inverse_of="author",
-        loader=BookLoader()
-    )
-
-    @classmethod
-    def objects(cls):
-        return QuerySet(cls)
-```
-
-## Next Steps
-
-- Learn about [Core Concepts](core-concepts.md)
-- Explore [Relationship Types](relationship-types.md)
-- Configure [Caching](caching.md)
-- Implement [Custom Loaders](custom-loaders.md)

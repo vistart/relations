@@ -3,9 +3,9 @@ from typing import ClassVar
 
 from pydantic import BaseModel
 
-from src.relations import HasOne, HasMany, BelongsTo, RelationDescriptor
 from src.relations.base import RelationManagementMixin
 from src.relations.cache import CacheConfig
+from src.relations.descriptors import HasOne, HasMany, BelongsTo, RelationDescriptor
 from src.relations.interfaces import RelationLoader
 
 

@@ -3,7 +3,11 @@
 from typing import ClassVar, Any, Optional, List
 import pytest
 from pydantic import BaseModel
-from src.relations import BelongsTo, HasMany, RelationManagementMixin, RelationLoader, CacheConfig, HasOne
+
+from src.relations.base import RelationManagementMixin
+from src.relations.cache import CacheConfig
+from src.relations.descriptors import BelongsTo, HasMany, HasOne
+from src.relations.interfaces import RelationLoader
 
 
 class Employee(RelationManagementMixin, BaseModel):

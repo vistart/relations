@@ -1,14 +1,14 @@
 """Tests for cache module."""
 
-from datetime import datetime, timedelta
 import time
-import pytest
+
 from src.relations.cache import (
     CacheConfig,
     GlobalCacheConfig,
     CacheEntry,
     RelationCache
 )
+
 
 def test_cache_config():
     """Test CacheConfig initialization and defaults."""

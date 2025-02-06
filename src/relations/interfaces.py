@@ -50,7 +50,6 @@ class RelationValidation(ABC):
         """
         pass
 
-
 class RelationManagementInterface(ABC):
     """Interface defining required relation management capabilities."""
 

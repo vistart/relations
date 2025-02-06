@@ -68,7 +68,7 @@ class Author(RelationManagementMixin, BaseModel):
 # 使用
 author = Author(id=1)
 books = author.books()  # 使用带自动缓存的加载器
-recent_books = author.books_query.published_after('2023-01-01')  # 实时查询
+recent_books = author.books_query().published_after('2023-01-01')  # 实时查询
 ```
 
 ### API 集成

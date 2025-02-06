@@ -160,7 +160,7 @@ class Book(RelationManagementMixin, BaseModel):
         return AdvancedBookQuerySet(cls)
 
 # 使用示例
-recent_books = author.books_query.published_after('2023-01-01')
+recent_books = author.books_query().published_after('2023-01-01')
 ```
 
 ## 延迟加载链

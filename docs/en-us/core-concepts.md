@@ -54,7 +54,7 @@ Data access is handled through two primary mechanisms:
 ### QuerySet
 - Provides a flexible query interface for related data
 - Supports filtering and custom query methods
-- Available through `_query` property on relationships
+- Available through `_query()` method on relationships
 - Allows real-time querying without caching
 - Can be extended with custom query operations
 
@@ -98,4 +98,4 @@ author = Author(id=1, name="John")
 books = author.books()  # Returns cached data if available
 
 # Query interface (real-time queries)
-recent_books = author.books_query.filter(published_after="2023-01-01")
+recent_books = author.books_query().filter(published_after="2023-01-01")

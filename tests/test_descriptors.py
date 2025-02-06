@@ -5,12 +5,9 @@ from typing import ClassVar, Any, List, Optional
 import pytest
 from pydantic import BaseModel
 
-from src.relations import (
-    BelongsTo,
-    HasOne,
-    HasMany,
-    RelationManagementMixin, RelationLoader
-)
+from src.relations.descriptors import BelongsTo, HasOne, HasMany
+from src.relations.base import RelationManagementMixin
+from src.relations.interfaces import  RelationLoader
 
 
 # Mock QuerySet for testing
@@ -80,7 +77,7 @@ def test_relationship_validator():
     assert hasattr(loaded_author, 'name')
 
     # Test querying through relationship
-    books_query = author.book_query
+    books_query = author.book_query()
     assert isinstance(books_query, MockQuerySet)
     queried_books = books_query.filter()
     assert len(queried_books) > 0
@@ -198,4 +195,4 @@ def test_validates_on_query_method():
 
     # Try to access the query property - should trigger validation
     with pytest.raises(ValueError, match="Inverse relationship .* not found"):
-        _ = author.book_query
+        _ = author.book_query()
